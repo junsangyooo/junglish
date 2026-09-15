@@ -1,0 +1,18 @@
+# deploy/docker-compose.yml — app only; a host reverse proxy (see nginx.conf.example) terminates TLS.
+# Required env: ORIGIN (public URL, e.g. https://your.domain). Optional: XFF_DEPTH (number of proxies in front).
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    environment:
+      CONTENT_DB: /data/content.db
+      PROGRESS_DB: /data/progress.db
+      ORIGIN: ${ORIGIN:?set ORIGIN to the public URL, e.g. https://your.domain}
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: ${XFF_DEPTH:-1}
+    volumes:
+      - ../data:/data
+    ports:
+      - "127.0.0.1:3400:3000"

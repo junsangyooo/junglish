@@ -1,0 +1,22 @@
+# generated data & content outputs
+data/
+backups/
+pipeline/out/
+pipeline/seeds/raw/
+pipeline/seeds/*.json
+!pipeline/seeds/topics.json
+pipeline/handoff/
+*.db
+*.db-wal
+*.db-shm
+
+# local tooling / notes
+.venv/
+__pycache__/
+.pytest_cache/
+node_modules/
+app/build/
+app/.svelte-kit/
+docs/
+.superpowers/
+.env

@@ -1,0 +1,6 @@
+{
+  "business": ["meetings", "email writing", "negotiation", "presentations", "scheduling", "giving feedback", "asking for help", "reporting progress", "disagreeing politely", "customer calls", "job interviews", "networking events", "project planning", "handling complaints", "remote work"],
+  "daily": ["restaurants", "travel and airports", "hotels", "shopping", "small talk", "making plans with friends", "health and doctors", "housing and repairs", "hobbies", "weather and seasons", "apologizing", "giving directions", "phone calls", "gym and sports", "family and relationships"],
+  "grammar": ["conditionals", "modals for politeness", "perfect tenses", "relative clauses", "reported speech", "passive voice", "gerunds and infinitives", "comparatives", "question tags", "inversion and emphasis", "articles", "prepositions of time", "phrasal verb patterns", "subjunctive and suggestions", "linking words"],
+  "collocation": ["verb + noun (business)", "verb + noun (daily)", "adjective + noun", "adverb + adjective", "noun + noun compounds", "make/do/take/have", "get + adjective", "time expressions", "money and numbers", "feelings and opinions"]
+}
