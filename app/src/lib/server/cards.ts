@@ -1,6 +1,6 @@
 import { State } from 'ts-fsrs';
 import type { PatternRow, WordRow } from './content';
-import type { CardType, StateRow } from './fsrs';
+import { previewIntervals, type CardType, type StateRow } from './fsrs';
 
 export type CardVM = {
 	type: CardType; id: number; isNew: boolean; mode: 'flip' | 'type'; reverse: boolean;
@@ -9,6 +9,7 @@ export type CardVM = {
 	typing: { sentence: string; answer: string } | null;
 	tts: string;
 	mySentence: string | null;
+	intervals: Record<1 | 2 | 3, string>;
 };
 
 const TYPING_MIN_DAYS = 14;
@@ -66,7 +67,7 @@ export function wordCard(w: WordRow, s: StateRow | null, rnd: () => number = Mat
 			lines: [{ en: w.example_work, ko: w.example_work_ko }, { en: w.example_daily, ko: w.example_daily_ko }],
 			note: '', extra: w.collocations.join(' · ')
 		},
-		typing, tts: w.word, mySentence: null
+		typing, tts: w.word, mySentence: null, intervals: previewIntervals(s)
 	};
 }
 
@@ -80,6 +81,6 @@ export function patternCard(p: PatternRow, s: StateRow | null, mySentence: strin
 			lines: [{ en: p.example_1, ko: p.example_1_ko }, { en: p.example_2, ko: p.example_2_ko }],
 			note: p.grammar_note_ko ?? '', extra: ''
 		},
-		typing, tts: p.example_1, mySentence
+		typing, tts: p.example_1, mySentence, intervals: previewIntervals(s)
 	};
 }

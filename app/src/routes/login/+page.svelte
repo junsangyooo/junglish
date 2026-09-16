@@ -5,13 +5,17 @@
 </script>
 
 <div class="screen">
-	<div class="grow">
-		<h1>Junglish</h1>
-		<form method="POST" use:enhance>
-			<p><input name="name" placeholder="이름" autocomplete="username" required /></p>
-			<p><input name="password" type="password" placeholder="비밀번호" autocomplete="current-password" required /></p>
-			{#if form?.message}<p class="small" style="color: var(--again)">{form.message}</p>{/if}
-			<button style="width:100%">로그인</button>
+	<div class="pane fill" style="justify-content:center">
+		<div class="center" style="margin-bottom:28px">
+			<p style="font-size:52px; margin:0">🌿</p>
+			<h1 style="font-size:30px">Junglish</h1>
+			<p class="muted">매일 20분, 일에서 쓰는 영어</p>
+		</div>
+		<form method="POST" use:enhance class="stack">
+			<input name="name" placeholder="이름" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required />
+			<input name="password" type="password" placeholder="비밀번호" autocomplete="current-password" required />
+			{#if form?.message}<p class="small" style="color:var(--again); margin:0">{form.message}</p>{/if}
+			<button>로그인</button>
 		</form>
 	</div>
 </div>

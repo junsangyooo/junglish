@@ -1,7 +1,15 @@
+import type { User } from './auth';
+import { dayDialogue } from './content';
 import type { Dbs } from './db';
+import { dueCount } from './fsrs';
 
 export const STEPS = ['review', 'words', 'patterns', 'dialogue', 'shadow', 'write', 'final', 'done'] as const;
 export type Step = (typeof STEPS)[number];
+
+export const STEP_LABEL: Record<Step, string> = {
+	review: '복습', words: '신규 단어', patterns: '신규 패턴', dialogue: '읽기·듣기',
+	shadow: '쉐도잉', write: '내 문장', final: '마무리 복습', done: '완료'
+};
 
 export function localDate(d: Date): string {
 	return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
@@ -18,8 +26,9 @@ export function markActivity(dbs: Dbs, userId: number, now = new Date()): void {
 
 export function completeDay(dbs: Dbs, userId: number, day: number, now = new Date()): void {
 	const tx = dbs.progress.transaction(() => {
-		dbs.progress.prepare("update day_progress set step='done', completed_at=coalesce(completed_at, ?) where user_id=? and day=?")
-			.run(now.toISOString(), userId, day);
+		dbs.progress.prepare(`insert into day_progress(user_id, day, step, completed_at) values(?,?,'done',?)
+			on conflict(user_id, day) do update set step='done', completed_at=coalesce(day_progress.completed_at, excluded.completed_at)`)
+			.run(userId, day, now.toISOString());
 		dbs.progress.prepare('update users set current_day = current_day + 1 where id=? and current_day=?').run(userId, day);
 		markActivity(dbs, userId, now);
 	});
@@ -62,3 +71,67 @@ function newIds(dbs: Dbs, userId: number, day: number, type: 'word' | 'pattern')
 
 export const newWordIds = (dbs: Dbs, userId: number, day: number) => newIds(dbs, userId, day, 'word');
 export const newPatternIds = (dbs: Dbs, userId: number, day: number) => newIds(dbs, userId, day, 'pattern');
+
+const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
+const weekdayFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short' });
+
+/** 0 = Monday … 6 = Sunday, in Seoul time. */
+export function weekdayIndex(d: Date): number {
+	return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(weekdayFmt.format(d));
+}
+
+const shiftDays = (from: Date, n: number) => new Date(from.getTime() + n * 86_400_000);
+
+export type DayDot = { date: string; label: string; active: boolean; today: boolean };
+
+/** Monday-to-Sunday dots for the current week, for the home header. */
+export function weekActivity(dbs: Dbs, userId: number, now = new Date()): DayDot[] {
+	const today = localDate(now);
+	const idx = weekdayIndex(now);
+	const dates = Array.from({ length: 7 }, (_, i) => localDate(shiftDays(now, i - idx)));
+	const active = activeDates(dbs, userId, dates[0], dates[6]);
+	return dates.map((date, i) => ({ date, label: WEEKDAYS[i], active: active.has(date), today: date === today }));
+}
+
+/** Study days over the last 12 weeks, starting on a Monday so the grid lines up by weekday. */
+export function activityGrid(dbs: Dbs, userId: number, now = new Date()): DayDot[] {
+	const today = localDate(now);
+	const idx = weekdayIndex(now);
+	const dates = Array.from({ length: 77 + idx + 1 }, (_, i) => localDate(shiftDays(now, i - (77 + idx))));
+	const active = activeDates(dbs, userId, dates[0], today);
+	return dates.map((date) => ({ date, label: WEEKDAYS[weekdayIndex(new Date(`${date}T12:00:00+09:00`))], active: active.has(date), today: date === today }));
+}
+
+function activeDates(dbs: Dbs, userId: number, from: string, to: string): Set<string> {
+	const rows = dbs.progress.prepare('select date from activity_days where user_id=? and date between ? and ?')
+		.all(userId, from, to) as { date: string }[];
+	return new Set(rows.map((r) => r.date));
+}
+
+/** The day finished today, if any — the home screen celebrates instead of nagging. */
+export function dayFinishedToday(dbs: Dbs, userId: number, now = new Date()): number | null {
+	const row = dbs.progress.prepare("select day from day_progress where user_id=? and date(completed_at, '+9 hours')=? order by day desc limit 1")
+		.get(userId, localDate(now)) as { day: number } | undefined;
+	return row?.day ?? null;
+}
+
+export type StepCard = { step: Step; label: string; detail: string; state: 'done' | 'current' | 'todo' };
+
+/** The day's steps as a path: what is finished, what is next, what is still ahead. */
+export function dayOverview(dbs: Dbs, user: User, day: number, current: Step): StepCard[] {
+	const currentIndex = STEPS.indexOf(current);
+	const counts: Record<string, string> = {
+		review: `${dueCount(dbs, user.id)}개`,
+		words: `${newWordIds(dbs, user.id, day).length}개`,
+		patterns: `${newPatternIds(dbs, user.id, day).length}개`,
+		dialogue: `${dayDialogue(dbs, day)?.lines.length ?? 0}줄`,
+		shadow: '한 줄씩 따라 말하기',
+		write: '3문장',
+		final: '오늘 배운 것 굳히기'
+	};
+	return STEPS.filter((s) => s !== 'done').map((step, i) => ({
+		step, label: STEP_LABEL[step],
+		detail: i < currentIndex ? '완료' : counts[step],
+		state: i < currentIndex ? 'done' : i === currentIndex ? 'current' : 'todo'
+	}));
+}

@@ -2,12 +2,20 @@
 <html lang="ko">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="text-scale" content="scale" />
 		<link rel="manifest" href="/manifest.webmanifest" />
-		<meta name="theme-color" content="#2f6fed" />
+		<meta name="theme-color" content="#f5f7f4" media="(prefers-color-scheme: light)" />
+		<meta name="theme-color" content="#0e1512" media="(prefers-color-scheme: dark)" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-title" content="Junglish" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<link rel="apple-touch-icon" href="/icon-192.png" />
+		<link rel="icon" href="/icon.svg" type="image/svg+xml" />
+		<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+		<link
+			rel="stylesheet"
+			crossorigin
+			href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+		/>
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		%sveltekit.head%
 	</head>

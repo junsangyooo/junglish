@@ -53,6 +53,23 @@ export function rate(dbs: Dbs, userId: number, type: CardType, id: number, ratin
 	return row;
 }
 
+function humanSpan(ms: number): string {
+	const min = Math.max(1, Math.round(ms / 60_000));
+	if (min < 60) return `${min}분`;
+	const hours = Math.round(min / 60);
+	if (hours < 24) return `${hours}시간`;
+	const days = Math.round(min / 1440);
+	if (days < 31) return `${days}일`;
+	return `${Math.round(days / 30)}개월`;
+}
+
+/** Next interval per rating, shown above the rating buttons (Anki-style). */
+export function previewIntervals(s: StateRow | null, now = new Date()): Record<1 | 2 | 3, string> {
+	const preview = f.repeat(s ? toCard(s) : createEmptyCard(now), now);
+	const at = (g: Grade) => humanSpan(preview[g].card.due.getTime() - now.getTime());
+	return { 1: at(Rating.Again), 2: at(Rating.Hard), 3: at(Rating.Good) };
+}
+
 export function markKnown(dbs: Dbs, userId: number, type: CardType, id: number): void {
 	const c = createEmptyCard(new Date());
 	dbs.progress.prepare(UPSERT).run(rowFromCard(userId, type, id, c, 1));

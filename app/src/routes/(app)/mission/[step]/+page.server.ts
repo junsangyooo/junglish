@@ -3,8 +3,9 @@ import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getDbs } from '$lib/server/db';
 import { dayDialogue, dayPatterns } from '$lib/server/content';
-import { advanceStep, getProgress, localDate, STEPS, streak, type Step } from '$lib/server/mission';
+import { advanceStep, getProgress, localDate, STEPS, STEP_LABEL, streak, weekActivity, type Step } from '$lib/server/mission';
 import { newPatternQueue, newWordQueue, reviewQueue, writeSuggestions } from '$lib/server/queue';
+import { buildQuiz } from '$lib/quiz';
 
 export const load: PageServerLoad = ({ locals, params }) => {
 	const dbs = getDbs();
@@ -16,7 +17,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	const current = getProgress(dbs, user.id, day).step;
 	if (step !== current) redirect(303, step === 'done' ? '/' : `/mission/${current}`);
 
-	const base = { day, step, stepIndex: STEPS.indexOf(step), totalSteps: STEPS.length - 1 };
+	const base = { day, step, label: STEP_LABEL[step], stepIndex: STEPS.indexOf(step), totalSteps: STEPS.length - 1 };
 	switch (step) {
 		case 'review':
 		case 'final': {
@@ -38,15 +39,10 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		case 'shadow': {
 			const dialogue = dayDialogue(dbs, day);
 			if (!dialogue) redirect(303, `/mission/${advanceStep(dbs, user.id, day, step)}`);
-			const others = dayPatterns(dbs, day).filter((p) => !dialogue.quiz.some((q) => q.pattern_id === p.id))
-				.map((p) => p.pattern.replace(/~/g, '').replace(/\s+/g, ' ').trim());
-			const quiz = dialogue.quiz.map((q, i) => {
-				const distractors = dialogue.quiz.filter((_, j) => j !== i).map((x) => x.blank_text);
-				distractors.push(others[i % Math.max(others.length, 1)] ?? '—');
-				const options = [q.blank_text, ...distractors].sort(() => Math.random() - 0.5);
-				return { ...q, options };
-			});
-			return { ...base, dialogue: { ...dialogue, quiz } };
+			const others = dayPatterns(dbs, day)
+				.filter((p) => !dialogue.quiz.some((q) => q.pattern_id === p.id))
+				.map((p) => p.pattern);
+			return { ...base, dialogue: { ...dialogue, quiz: undefined }, questions: buildQuiz(dialogue.quiz, others) };
 		}
 		case 'write':
 			return { ...base, suggestions: writeSuggestions(dbs, user, day) };
@@ -54,7 +50,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 			const today = localDate(new Date());
 			const n = (sql: string) => (dbs.progress.prepare(sql).get(user.id, today) as { n: number }).n;
 			return {
-				...base, streak: streak(dbs, user.id),
+				...base, streak: streak(dbs, user.id), week: weekActivity(dbs, user.id),
 				summary: {
 					reviews: n("select count(*) as n from review_logs where user_id=? and date(review, '+9 hours')=? and state<>0"),
 					learned: n("select count(*) as n from review_logs where user_id=? and date(review, '+9 hours')=? and state=0"),

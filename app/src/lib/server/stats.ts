@@ -1,5 +1,5 @@
 import type { Dbs } from './db';
-import { localDate, streak } from './mission';
+import { activityGrid, localDate, streak } from './mission';
 
 export function summary(dbs: Dbs, userId: number) {
 	const p = dbs.progress;
@@ -23,6 +23,9 @@ export function summary(dbs: Dbs, userId: number) {
 		streak: streak(dbs, userId),
 		learning: count('select count(*) as n from card_states where user_id=? and known=0'),
 		known: count('select count(*) as n from card_states where user_id=? and known=1'),
+		mature: count("select count(*) as n from card_states where user_id=? and known=0 and scheduled_days >= 21"),
+		reviews: count('select count(*) as n from review_logs where user_id=?'),
+		grid: activityGrid(dbs, userId),
 		next7, knownList, sentences
 	};
 }
