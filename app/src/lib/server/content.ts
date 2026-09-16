@@ -37,6 +37,6 @@ export function patternById(dbs: Dbs, id: number): PatternRow | null {
 	return (dbs.content.prepare('select * from patterns where id=?').get(id) as PatternRow) ?? null;
 }
 
-export function maxDay(dbs: Dbs): number {
-	return (dbs.content.prepare('select max(day) as d from words').get() as { d: number | null }).d ?? 0;
+export function hasDay(dbs: Dbs, day: number): boolean {
+	return !!dbs.content.prepare('select 1 from words where day=? limit 1').get(day);
 }

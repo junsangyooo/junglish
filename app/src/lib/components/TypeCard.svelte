@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { CardVM } from '$lib/server/cards';
+	import { normalizeAnswer } from '$lib/answer';
 	import { speak } from '$lib/tts';
 	let { card, onresult, busy }: { card: CardVM; onresult: (correct: boolean) => void; busy: boolean } = $props();
 	let value = $state('');
 	let checked = $state<null | boolean>(null);
-	const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
 	$effect(() => { card; value = ''; checked = null; });
-	function check() { if (checked === null) checked = norm(value) === norm(card.typing!.answer); }
+	function check() { if (checked === null) checked = normalizeAnswer(value) === normalizeAnswer(card.typing!.answer); }
 	const filled = $derived(value.trim().length > 0);
 </script>
 
@@ -32,7 +32,7 @@
 	<h3>{checked ? '정답' : '아쉬워요'}</h3>
 	<div class="answer-row">
 		<p style="margin:0; font-weight:700">{card.typing!.answer}</p>
-		<button class="audio" onclick={() => speak(card.typing!.sentence.replace('___', card.typing!.answer))} aria-label="문장 듣기">
+		<button class="audio" onclick={() => speak(card.typing!.sentence.replace(/_{2,}/, card.typing!.answer))} aria-label="문장 듣기">
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4zM16 9a4 4 0 0 1 0 6" /></svg>
 		</button>
 	</div>

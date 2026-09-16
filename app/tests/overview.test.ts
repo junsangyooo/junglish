@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeTestDbs } from './helpers';
-import { advanceStep, completeDay, dayFinishedToday, dayOverview, weekActivity, weekdayIndex } from '../src/lib/server/mission';
+import { advanceStep, completeDay, dayFinishedToday, dayOverview, seoulDayRange, weekActivity, weekdayIndex } from '../src/lib/server/mission';
 import { previewIntervals } from '../src/lib/server/fsrs';
 import type { User } from '../src/lib/server/auth';
 
@@ -31,6 +31,15 @@ describe('weekdayIndex', () => {
 		expect(weekdayIndex(new Date('2026-09-20T10:00:00+09:00'))).toBe(6);
 		// 23:30 UTC on Sunday is already Monday in Seoul.
 		expect(weekdayIndex(new Date('2026-09-13T23:30:00Z'))).toBe(0);
+	});
+});
+
+describe('seoulDayRange', () => {
+	it('spans one Seoul day as UTC bounds', () => {
+		expect(seoulDayRange('2026-09-16')).toEqual({
+			start: '2026-09-15T15:00:00.000Z',
+			end: '2026-09-16T15:00:00.000Z'
+		});
 	});
 });
 

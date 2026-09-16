@@ -18,10 +18,6 @@ export function isTypingMode(s: StateRow | null): boolean {
 	return !!s && s.state === State.Review && s.scheduled_days >= TYPING_MIN_DAYS;
 }
 
-export function normalizeAnswer(s: string): string {
-	return s.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
 function stem(word: string): string {
 	return word.toLowerCase().slice(0, word.length > 4 ? 4 : word.length);
 }

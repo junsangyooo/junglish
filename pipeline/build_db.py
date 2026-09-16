@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS quiz_items (
   line_index INTEGER NOT NULL, blank_text TEXT NOT NULL, answer TEXT NOT NULL,
   pattern_id INTEGER NOT NULL REFERENCES patterns(id)
 );
+CREATE INDEX IF NOT EXISTS idx_quiz_items_dialogue ON quiz_items(dialogue_id, line_index);
 CREATE INDEX IF NOT EXISTS idx_words_day ON words(day);
 CREATE INDEX IF NOT EXISTS idx_patterns_day ON patterns(day);
 """

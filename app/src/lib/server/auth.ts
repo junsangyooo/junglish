@@ -3,7 +3,7 @@ import type { Dbs } from './db';
 
 export type User = { id: number; name: string; current_day: number; review_limit: number };
 
-const SESSION_DAYS = 30;
+export const SESSION_DAYS = 30;
 
 export function hashPassword(pw: string): string {
 	const salt = randomBytes(16).toString('hex');

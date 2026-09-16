@@ -11,8 +11,17 @@ export const STEP_LABEL: Record<Step, string> = {
 	shadow: '쉐도잉', write: '내 문장', final: '마무리 복습', done: '완료'
 };
 
+// Hoisted: building a formatter costs ~20µs, and streak() formats one date per day of history.
+const dateFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
+
 export function localDate(d: Date): string {
-	return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+	return dateFmt.format(d);
+}
+
+/** UTC bounds of one Seoul day, so queries can range over an indexed column instead of date(col, '+9 hours'). */
+export function seoulDayRange(date: string): { start: string; end: string } {
+	const start = new Date(`${date}T00:00:00+09:00`);
+	return { start: start.toISOString(), end: new Date(start.getTime() + 86_400_000).toISOString() };
 }
 
 export function getProgress(dbs: Dbs, userId: number, day: number): { step: Step; completed_at: string | null } {
@@ -110,8 +119,9 @@ function activeDates(dbs: Dbs, userId: number, from: string, to: string): Set<st
 
 /** The day finished today, if any — the home screen celebrates instead of nagging. */
 export function dayFinishedToday(dbs: Dbs, userId: number, now = new Date()): number | null {
-	const row = dbs.progress.prepare("select day from day_progress where user_id=? and date(completed_at, '+9 hours')=? order by day desc limit 1")
-		.get(userId, localDate(now)) as { day: number } | undefined;
+	const { start, end } = seoulDayRange(localDate(now));
+	const row = dbs.progress.prepare('select day from day_progress where user_id=? and completed_at >= ? and completed_at < ? order by day desc limit 1')
+		.get(userId, start, end) as { day: number } | undefined;
 	return row?.day ?? null;
 }
 

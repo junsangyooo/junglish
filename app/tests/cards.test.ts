@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { State } from 'ts-fsrs';
-import { blankWord, isTypingMode, normalizeAnswer, patternCard, wordCard } from '../src/lib/server/cards';
+import { blankWord, isTypingMode, patternCard, wordCard } from '../src/lib/server/cards';
+import { normalizeAnswer } from '../src/lib/answer';
 import { makeTestDbs } from './helpers';
 import { dayPatterns, dayWords } from '../src/lib/server/content';
 import type { StateRow } from '../src/lib/server/fsrs';

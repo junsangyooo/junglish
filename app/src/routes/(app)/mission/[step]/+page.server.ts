@@ -3,7 +3,7 @@ import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getDbs } from '$lib/server/db';
 import { dayDialogue, dayPatterns } from '$lib/server/content';
-import { advanceStep, getProgress, localDate, STEPS, STEP_LABEL, streak, weekActivity, type Step } from '$lib/server/mission';
+import { advanceStep, getProgress, localDate, seoulDayRange, STEPS, STEP_LABEL, streak, weekActivity, type Step } from '$lib/server/mission';
 import { newPatternQueue, newWordQueue, reviewQueue, writeSuggestions } from '$lib/server/queue';
 import { buildQuiz } from '$lib/quiz';
 
@@ -47,14 +47,15 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		case 'write':
 			return { ...base, suggestions: writeSuggestions(dbs, user, day) };
 		case 'done': {
-			const today = localDate(new Date());
-			const n = (sql: string) => (dbs.progress.prepare(sql).get(user.id, today) as { n: number }).n;
+			// Range over the raw timestamps so the queries stay indexed as review_logs grows.
+			const { start, end } = seoulDayRange(localDate(new Date()));
+			const n = (sql: string) => (dbs.progress.prepare(sql).get(user.id, start, end) as { n: number }).n;
 			return {
 				...base, streak: streak(dbs, user.id), week: weekActivity(dbs, user.id),
 				summary: {
-					reviews: n("select count(*) as n from review_logs where user_id=? and date(review, '+9 hours')=? and state<>0"),
-					learned: n("select count(*) as n from review_logs where user_id=? and date(review, '+9 hours')=? and state=0"),
-					known: n("select count(*) as n from card_states where user_id=? and known=1 and date(due, '+9 hours')=?")
+					reviews: n('select count(*) as n from review_logs where user_id=? and review >= ? and review < ? and state<>0'),
+					learned: n('select count(*) as n from review_logs where user_id=? and review >= ? and review < ? and state=0'),
+					known: n('select count(*) as n from card_states where user_id=? and known=1 and due >= ? and due < ?')
 				}
 			};
 		}

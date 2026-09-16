@@ -1,7 +1,7 @@
 // app/src/routes/login/+page.server.ts
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { checkLoginRate, login } from '$lib/server/auth';
+import { checkLoginRate, login, SESSION_DAYS } from '$lib/server/auth';
 import { getDbs } from '$lib/server/db';
 
 export const load: PageServerLoad = ({ locals }) => {
@@ -16,7 +16,7 @@ export const actions: Actions = {
 		// Mobile keyboards like to capitalize and pad the name field.
 		const sid = login(dbs, String(form.get('name') ?? '').trim(), String(form.get('password') ?? ''));
 		if (!sid) return fail(400, { message: '이름 또는 비밀번호가 틀렸습니다' });
-		cookies.set('sid', sid, { path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 30 * 86400 });
+		cookies.set('sid', sid, { path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: SESSION_DAYS * 86_400 });
 		redirect(303, '/');
 	}
 };

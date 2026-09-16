@@ -6,7 +6,7 @@
 
 **Daily English for a Korean professional — 365 days of vocabulary, patterns and dialogue, scheduled by FSRS.**
 
-One mission a day. Twelve minutes on a phone. No streaks to buy, no leagues, no ads.
+One mission a day. Twenty minutes on a phone. No streaks to buy, no leagues, no ads.
 
 ![SvelteKit](https://img.shields.io/badge/SvelteKit-2-ff3e00?logo=svelte&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-ff3e00?logo=svelte&logoColor=white)
@@ -187,7 +187,7 @@ The redesign shipped together with a QA pass on the real device size. A few beha
 | Layer | Choice | Why |
 | --- | --- | --- |
 | UI | SvelteKit 2, Svelte 5 runes, TypeScript | Server loads keep the client thin; no client state library needed |
-| Styling | One hand-written `app.css` (~150 lines of tokens and primitives) + scoped component styles | No framework to fight on a small, opinionated UI |
+| Styling | One hand-written `app.css` of tokens and primitives + scoped component styles | No framework to fight on a small, opinionated UI |
 | Data | SQLite via `better-sqlite3`, synchronous | Single user, single box; queries are sub-millisecond |
 | Scheduling | `ts-fsrs` 5.4 | Modern FSRS, exposes interval previews |
 | Speech | Web Speech API | No audio to host, works offline on device voices |

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS review_logs (
   last_elapsed_days INTEGER NOT NULL, scheduled_days INTEGER NOT NULL, learning_steps INTEGER NOT NULL,
   review TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_review_logs_user_review ON review_logs(user_id, review);
 CREATE TABLE IF NOT EXISTS day_progress (
   user_id INTEGER NOT NULL, day INTEGER NOT NULL,
   step TEXT NOT NULL DEFAULT 'review', completed_at TEXT,
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS user_sentences (
   id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, pattern_id INTEGER NOT NULL,
   text TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX IF NOT EXISTS idx_user_sentences ON user_sentences(user_id, pattern_id, id);
 CREATE TABLE IF NOT EXISTS activity_days (
   user_id INTEGER NOT NULL, date TEXT NOT NULL, PRIMARY KEY (user_id, date)
 );
