@@ -6,22 +6,22 @@
 
 **Daily English for a Korean professional — 365 days of vocabulary, patterns and dialogue, scheduled by FSRS.**
 
-One mission a day. Twenty minutes on a phone. No streaks to buy, no leagues, no ads.
+One mission a day. Twenty minutes on a phone. It works on the subway, and it reminds you at nine.
 
 ![SvelteKit](https://img.shields.io/badge/SvelteKit-2-ff3e00?logo=svelte&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte_5-runes-ff3e00?logo=svelte&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-WAL-003b57?logo=sqlite&logoColor=white)
 ![FSRS](https://img.shields.io/badge/scheduler-FSRS_5-12b76a)
-![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8)
-![tests](https://img.shields.io/badge/tests-43_vitest_%2B_71_pytest-12b76a)
+![PWA](https://img.shields.io/badge/PWA-offline_%2B_push-5a0fc8)
+![tests](https://img.shields.io/badge/tests-84_vitest_%2B_71_pytest-12b76a)
 
 <br />
 
+<img src="assets/screenshots/landing.png" width="205" alt="Landing page" />
 <img src="assets/screenshots/home.png" width="205" alt="Home: weekly streak and the day's step path" />
 <img src="assets/screenshots/card-back.png" width="205" alt="Word card with next-review intervals" />
 <img src="assets/screenshots/dialogue.png" width="205" alt="Dialogue with one blank at a time" />
-<img src="assets/screenshots/done.png" width="205" alt="Day complete" />
 
 </div>
 
@@ -36,7 +36,7 @@ So the product is deliberately small:
 - **One mission per day**, always the same seven steps, always finishable in one sitting.
 - **Words and phrases you don't already know** — the 2,000 most common English words are filtered out before content is generated.
 - **Everything bilingual**, with Korean written the way a Korean actually speaks, not dictionary Korean.
-- **Spaced repetition that you can see** — every rating button shows when the card comes back.
+- **Spaced repetition you can see** — every rating button shows when the card comes back.
 - **No social layer.** Your only opponent is yesterday.
 
 ---
@@ -73,6 +73,42 @@ Seven steps. The home screen shows them as a path, so you always know what is le
 </table>
 
 The full order: **review → new words → new patterns → dialogue → shadowing → your own sentences → final review**. Every step is a server-side state (`day_progress.step`), so closing the app mid-session loses nothing.
+
+---
+
+## Accounts
+
+`/` is the landing page for visitors and the home screen for members — the same URL, decided by the session cookie.
+
+<div align="center">
+<img src="assets/screenshots/landing.png" width="230" alt="Landing page" />
+<img src="assets/screenshots/signup.png" width="230" alt="Invite-only signup" />
+</div>
+
+Signup is invite-only. The code lives in `SIGNUP_INVITE_CODE`, compared in constant time; with no code configured the route reports itself closed and the landing page stops offering it. Passwords are scrypt with a per-user salt, sessions are a 30-day cookie, and both login and signup are rate limited per IP — in separate buckets, so a mistyped invite code cannot lock anyone out of logging in.
+
+---
+
+## Offline and reminders
+
+The app is installable, and it keeps working when the network does not.
+
+<table>
+<tr>
+<td width="40%" valign="top"><img src="assets/screenshots/settings.png" alt="Reminder settings" /></td>
+<td valign="top">
+
+**Pages** — `src/service-worker.ts` precaches the build output, the icons and an offline page. Navigations are network-first with the last good copy as the fallback, so a screen you have opened today opens again in airplane mode; a screen you have never opened says so instead of failing. `/api/*` is never cached — progress lives on the server, and a cached rating would be a lie.
+
+**Ratings** — a rating that cannot be sent goes into a localStorage outbox and the card moves on. The queue drains oldest-first when the connection returns, re-reading itself between sends so a rating made mid-flush is not lost, and refusing to run twice at once so nothing is sent twice. A 401 is treated as "log in again", not as "this rating is invalid".
+
+**Time** — every rating carries the moment it happened. The server keeps that time for the streak when it lands today or yesterday in Seoul and is not in the future; otherwise it uses its own clock. A session finished at 23:50 and delivered at 00:10 still counts for the right day.
+
+**Reminders** — one web push a day at a time you choose, sent by a one-minute timer inside the app process. It looks back up to two hours so a restart cannot skip the day, never fires twice, and stays quiet once the day is done. Tapping it opens the step you stopped at.
+
+</td>
+</tr>
+</table>
 
 ### Dark mode
 
@@ -121,32 +157,41 @@ Each dialogue is a two-person scene at a robotics company that reuses three of t
 flowchart TB
     subgraph Browser["Phone — installable PWA"]
         UI["Svelte 5 runes UI<br/>CardRunner · Dialogue · SessionHeader"]
+        SW["Service worker<br/>precache · offline page · push"]
+        OUT["Outbox<br/>localStorage"]
         TTS["Web Speech API"]
     end
     subgraph Server["Node — SvelteKit adapter-node"]
         LOAD["+page.server.ts loads<br/>(queue, mission, stats)"]
-        API["/api/rate · /api/known<br/>/api/step · /api/sentence"]
+        API["/api/rate · /api/known<br/>/api/step · /api/sentence · /api/push"]
         FSRS["ts-fsrs scheduler"]
-        AUTH["scrypt sessions"]
+        AUTH["scrypt sessions · invite gate"]
+        TIMER["Reminder timer<br/>web-push"]
     end
     CDB[("content.db<br/>read-only")]
     PDB[("progress.db<br/>WAL")]
 
     UI <--> LOAD
     UI --> API
+    OUT --> API
     API --> FSRS
     FSRS --> PDB
     LOAD --> CDB
     LOAD --> PDB
     AUTH --> PDB
+    TIMER --> PDB
+    TIMER -.push.-> SW
+    SW -.serves.-> UI
     UI -.-> TTS
 ```
 
-**Two databases, on purpose.** `content.db` is opened read-only and is the same file for everyone; `progress.db` holds users, sessions, card states, review logs, day progress and your own sentences in WAL mode. Content can be rebuilt or replaced without any migration of learner data.
+**Two databases, on purpose.** `content.db` is opened read-only and is the same file for everyone; `progress.db` holds users, sessions, card states, review logs, day progress, push subscriptions and your own sentences in WAL mode. Content can be rebuilt or replaced without any migration of learner data, and the progress schema applies itself on startup — tables, indexes and missing user columns included.
 
 **Scheduling** is [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) with a single 10-minute learning step and 90% target retention. Three ratings only — 모름 / 애매 / 앎 — because a fourth choice on a phone is a coin flip. The same `f.repeat()` preview that FSRS uses internally is rendered under each button, so the cost of every answer is visible before you press it. Cards you mark "이미 알아요" are parked permanently and never scheduled again, and they can be un-parked from the stats tab.
 
 **Sessions are server state.** The client never decides what comes next: `/api/step` advances `day_progress` and is idempotent, so a double tap or a flaky connection cannot skip a step or double-complete a day.
+
+**Per-request work stays proportional to the screen.** Day boundaries are turned into UTC ranges (`seoulDayRange`) instead of wrapping columns in `date(…)`, labels for a page of cards are fetched in one query, and the three hot tables carry the indexes those queries need. On a profile with 12,000 cards and 120,000 review logs the home screen builds in about a millisecond and the stats tab in five.
 
 ---
 
@@ -168,17 +213,16 @@ Built mobile-first for one-handed use, then checked at 390×844 and 375×667.
 - **Every session screen** has the same header: close button, rounded progress bar, counter. In a standalone PWA there is no browser back button, so an explicit exit is not optional.
 - **Motion** is small and respects `prefers-reduced-motion`: a card pop, a wrong-answer shake, confetti once a day.
 
-### Rules that came out of QA, not design
+### Behaviour that is deliberate
 
-The redesign shipped together with a QA pass on the real device size. A few behaviours are deliberate:
-
-- A failed save **keeps the card on screen** with a retry button instead of moving on — a lost rating is worse than a lost second.
+- A failed save **keeps the rating** in the outbox and the card moves on — a lost rating is worse than a lost second.
 - Only **one save is in flight at a time**, so double taps cannot rate one card twice and skip the next.
 - Blanks in the dialogue are matched **case-insensitively**, because a sentence may capitalise a phrase that the quiz stores in lower case.
 - Distractors are rendered from the stored pattern text with `~` turned into `…`, so no option leaks the answer by looking malformed.
 - The writing step has **no "skip"** — one button saves whatever is filled in (including nothing), so a typed sentence is never thrown away.
-- The name field is `autocapitalize="none"` and trimmed server-side; iOS was otherwise breaking logins.
-- `speechSynthesis` is feature-detected, so in-app browsers without it degrade instead of crashing.
+- Name fields are `autocapitalize="none"` and trimmed server-side; iOS would otherwise break logins.
+- `speechSynthesis` and `PushManager` are feature-detected, so a browser without them degrades instead of crashing.
+- Logging out clears the cached pages, so a shared device cannot show the previous user's screens offline.
 
 ---
 
@@ -188,31 +232,40 @@ The redesign shipped together with a QA pass on the real device size. A few beha
 | --- | --- | --- |
 | UI | SvelteKit 2, Svelte 5 runes, TypeScript | Server loads keep the client thin; no client state library needed |
 | Styling | One hand-written `app.css` of tokens and primitives + scoped component styles | No framework to fight on a small, opinionated UI |
-| Data | SQLite via `better-sqlite3`, synchronous | Single user, single box; queries are sub-millisecond |
+| Data | SQLite via `better-sqlite3`, synchronous | Single box; queries are sub-millisecond |
 | Scheduling | `ts-fsrs` 5.4 | Modern FSRS, exposes interval previews |
+| Offline | `src/service-worker.ts` + a localStorage outbox | Precache from `$service-worker`, so the list is always the real build output |
+| Push | `web-push` with VAPID, timer inside the app process | No cron to register; a container restart is the whole deployment story |
 | Speech | Web Speech API | No audio to host, works offline on device voices |
 | Content | Python 3, `wordfreq`, `claude -p` with JSON schemas | Generation is a batch job, not a runtime dependency |
-| Tests | Vitest (server logic, in-memory SQLite) + pytest (pipeline) | Same fixtures as production schema |
+| Tests | Vitest (server logic and the outbox, in-memory SQLite) + pytest (pipeline) | Same fixtures as the production schema |
 | Runtime | Node 22, `@sveltejs/adapter-node` in Docker | One container, one volume |
 | Edge | Host nginx, TLS, `X-Forwarded-For` | Oracle Cloud free tier (ARM) |
-
-**Size:** ~1,870 lines of app code (TypeScript + Svelte + CSS), ~1,140 lines of Python pipeline.
 
 ---
 
 ## Project layout
 
 ```
-app/                     SvelteKit application
-  src/lib/components/    CardRunner, FlipCard, TypeCard, Dialogue, SessionHeader
-  src/lib/server/        db, auth, content, cards, queue, fsrs, mission, stats
-  src/lib/quiz.ts        dialogue blank quiz (shared by load and UI)
-  src/routes/(app)/      home, mission/[step], review, stats, settings
-  tests/                 vitest suites against in-memory SQLite
-pipeline/                content generation (seed → generate → assemble → validate → build)
-deploy/                  Dockerfile, compose file, nginx example, sync and backup scripts
-data/                    content.db (generated) and progress.db (runtime)
-assets/screenshots/      the images in this README
+app/                      SvelteKit application
+  src/service-worker.ts   precache, offline fallback, push, notification click
+  src/lib/queue.ts        outbox for ratings made offline
+  src/lib/install.ts      install-banner logic (pure, tested)
+  src/lib/quiz.ts         dialogue blank quiz, shared by the load and the UI
+  src/lib/answer.ts       typed-answer grading
+  src/lib/components/     CardRunner, FlipCard, TypeCard, Dialogue, SessionHeader,
+                          Landing, InstallBanner
+  src/lib/server/         db, auth, content, cards, queue, fsrs, mission, stats, push
+  src/routes/(app)/       home, mission/[step], review, stats, settings
+  src/routes/signup/      invite-gated account creation
+  src/routes/api/         rate, known, step, sentence, push
+  scripts/verify-sw.mjs   re-scans build/client and fails on a precache gap
+  static/offline.html     shown when a page was never cached
+  tests/                  vitest suites against in-memory SQLite
+pipeline/                 content generation (seed → generate → assemble → validate → build)
+deploy/                   Dockerfile, compose file, nginx example, sync and backup scripts
+data/                     content.db (generated) and progress.db (runtime)
+assets/screenshots/       the images in this README
 ```
 
 ## Running it locally
@@ -225,12 +278,21 @@ python3 -m venv .venv && .venv/bin/pip install -r pipeline/requirements.txt
 # 2. app
 cd app && npm install
 npm run user:add -- --name junsang     # prompts for a password
-npm run dev                            # http://localhost:5173
+PROGRESS_DB=/tmp/dev.db npm run dev     # http://localhost:5173
+```
+
+The service worker only exists in a production build, so verify offline behaviour against one:
+
+```bash
+cd app && npm run build
+PROGRESS_DB=/tmp/dev.db CONTENT_DB=../data/content.db \
+  PORT=5201 ORIGIN=http://127.0.0.1:5201 node build/index.js
 ```
 
 ```bash
-npm run check    # svelte-check, 0 errors
-npm test         # 43 vitest tests
+npm run check       # svelte-check
+npm test            # 84 vitest tests
+npm run verify:sw   # every built asset is in the precache list
 cd .. && .venv/bin/python -m pytest -q pipeline/tests   # 71 tests
 ```
 
@@ -241,6 +303,15 @@ DEPLOY_ENV=~/.secrets.env deploy/sync.sh --build
 ```
 
 `sync.sh` rsyncs the repository (without `node_modules`, `data/` or build output) to the server and rebuilds the container. The app listens on `127.0.0.1:3400`; the host nginx in `deploy/nginx.conf.example` terminates TLS and forwards. `data/` is a bind mount, so `progress.db` survives every rebuild, and `deploy/backup.sh` keeps 30 days of snapshots.
+
+Environment, all optional except `ORIGIN`:
+
+| Variable | Effect |
+| --- | --- |
+| `ORIGIN` | Public URL; required by adapter-node behind a proxy |
+| `SIGNUP_INVITE_CODE` | Enables signup and is the code people must enter. Empty means signup is closed |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Enable reminders. Without them the settings screen says notifications are unavailable |
+| `CONTENT_DB` / `PROGRESS_DB` | Database paths; default to `../data/*.db` |
 
 ---
 

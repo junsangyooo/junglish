@@ -3,7 +3,7 @@ import path from 'node:path';
 
 export type Dbs = { content: Database.Database; progress: Database.Database };
 
-export const PROGRESS_SCHEMA = `
+const PROGRESS_SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
   current_day INTEGER NOT NULL DEFAULT 1, review_limit INTEGER NOT NULL DEFAULT 100,

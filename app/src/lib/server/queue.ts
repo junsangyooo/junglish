@@ -6,7 +6,7 @@ import type { Dbs } from './db';
 import { dueCards } from './fsrs';
 import { newPatternIds, newWordIds } from './mission';
 
-export function latestSentence(dbs: Dbs, userId: number, patternId: number): string | null {
+function latestSentence(dbs: Dbs, userId: number, patternId: number): string | null {
 	const r = dbs.progress.prepare('select text from user_sentences where user_id=? and pattern_id=? order by id desc limit 1').get(userId, patternId) as { text: string } | undefined;
 	return r?.text ?? null;
 }

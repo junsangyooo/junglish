@@ -7,7 +7,7 @@ export type PushSubscriptionInput = { endpoint: string; keys: { p256dh: string; 
 export type Reminder = { id: number; name: string; url: string };
 
 /** A tick can drift past the target minute; look back this far so a day is never skipped. */
-export const CATCH_UP_MINUTES = 120;
+const CATCH_UP_MINUTES = 120;
 
 const clockFmt = new Intl.DateTimeFormat('en-GB', {
 	timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false
