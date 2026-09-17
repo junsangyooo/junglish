@@ -18,14 +18,42 @@ export function verifyPassword(pw: string, stored: string): boolean {
 	return a.length === b.length && timingSafeEqual(a, b);
 }
 
+export function createSession(dbs: Dbs, userId: number): string {
+	const sid = randomBytes(32).toString('hex');
+	const expires = new Date(Date.now() + SESSION_DAYS * 86_400_000).toISOString();
+	dbs.progress.prepare('insert into sessions(id,user_id,expires_at) values(?,?,?)').run(sid, userId, expires);
+	return sid;
+}
+
 export function login(dbs: Dbs, name: string, pw: string): string | null {
 	const row = dbs.progress.prepare('select id, password_hash from users where name=?').get(name) as
 		| { id: number; password_hash: string } | undefined;
 	if (!row || !verifyPassword(pw, row.password_hash)) return null;
-	const sid = randomBytes(32).toString('hex');
-	const expires = new Date(Date.now() + SESSION_DAYS * 86_400_000).toISOString();
-	dbs.progress.prepare('insert into sessions(id,user_id,expires_at) values(?,?,?)').run(sid, row.id, expires);
-	return sid;
+	return createSession(dbs, row.id);
+}
+
+/** Returns the new user's id, or null when the name is taken. */
+export function createUser(dbs: Dbs, name: string, pw: string): number | null {
+	try {
+		const r = dbs.progress.prepare('insert into users(name, password_hash) values(?,?)').run(name, hashPassword(pw));
+		return Number(r.lastInsertRowid);
+	} catch (e) {
+		if (e instanceof Error && e.message.includes('UNIQUE')) return null;
+		throw e;
+	}
+}
+
+/** Signup is closed unless an invite code is configured; the code itself never leaves the server. */
+export function signupOpen(): boolean {
+	return !!process.env.SIGNUP_INVITE_CODE;
+}
+
+export function checkInviteCode(code: string): boolean {
+	const expected = process.env.SIGNUP_INVITE_CODE ?? '';
+	if (!expected) return false;
+	const a = Buffer.from(code);
+	const b = Buffer.from(expected);
+	return a.length === b.length && timingSafeEqual(a, b);
 }
 
 export function getUserBySession(dbs: Dbs, sid: string): User | null {

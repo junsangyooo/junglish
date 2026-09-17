@@ -12,6 +12,11 @@ services:
       ORIGIN: ${ORIGIN:?set ORIGIN to the public URL, e.g. https://your.domain}
       ADDRESS_HEADER: X-Forwarded-For
       XFF_DEPTH: ${XFF_DEPTH:-1}
+      # Signup stays closed unless an invite code is set. Web push stays off unless VAPID keys are set.
+      SIGNUP_INVITE_CODE: ${SIGNUP_INVITE_CODE:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     volumes:
       - ../data:/data
     ports:

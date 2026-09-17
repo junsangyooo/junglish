@@ -1,7 +1,8 @@
 <!-- app/src/routes/(app)/+layout.svelte -->
 <script lang="ts">
 	import { page } from '$app/state';
-	let { children } = $props();
+	import InstallBanner from '$lib/components/InstallBanner.svelte';
+	let { data, children } = $props();
 
 	// [href, label, svg path]
 	const tabs: [string, string, string][] = [
@@ -9,10 +10,16 @@
 		['/stats', '통계', 'M4 20V10m6 10V4m6 16v-7m4 7H3'],
 		['/settings', '설정', 'M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3H9l-.3 2.6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4L4.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1L9 21h6l.3-2.6a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4z']
 	];
-	let sessionMode = $derived(page.url.pathname.startsWith('/mission') || page.url.pathname.startsWith('/review'));
+	// No tabs for visitors on the landing page, or while a study session is running.
+	let sessionMode = $derived(
+		!data.user || page.url.pathname.startsWith('/mission') || page.url.pathname.startsWith('/review')
+	);
 </script>
 
 <div class="screen">
+	{#if !sessionMode && data.user}
+		<InstallBanner />
+	{/if}
 	{@render children()}
 	{#if !sessionMode}
 		<nav class="tabs">

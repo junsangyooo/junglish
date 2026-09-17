@@ -1,9 +1,18 @@
 <!-- app/src/routes/(app)/+page.svelte -->
 <script lang="ts">
+	import Landing from '$lib/components/Landing.svelte';
 	let { data } = $props();
-	let done = $derived(data.finishedToday !== null);
 </script>
 
+{#if data.landing}
+	<Landing totals={data.totals} signupOpen={data.signupOpen} />
+{:else}
+	{@render home()}
+{/if}
+
+{#snippet home()}
+{#if !data.landing}
+{@const done = data.finishedToday !== null}
 <div class="pane fill">
 	<header>
 		<div class="head-row">
@@ -70,6 +79,8 @@
 	{/if}
 	<a class="btn btn-quiet" href="/review">복습만 하기 · {data.due}개</a>
 </div>
+{/if}
+{/snippet}
 
 <style>
 	header { padding: 12px 0 16px; }

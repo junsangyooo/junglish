@@ -29,6 +29,20 @@ export function getProgress(dbs: Dbs, userId: number, day: number): { step: Step
 	return dbs.progress.prepare('select step, completed_at from day_progress where user_id=? and day=?').get(userId, day) as any;
 }
 
+/**
+ * When a rating was queued offline the client sends the time it actually happened, so a
+ * session finished at 23:50 and delivered at 00:10 still counts for the right day.
+ * The client clock is untrusted: only today or yesterday in Seoul, never ahead of the server.
+ */
+export function activityTime(at: unknown, now = new Date()): Date {
+	if (typeof at !== 'string') return now;
+	const t = new Date(at);
+	if (Number.isNaN(t.getTime()) || t.getTime() > now.getTime()) return now;
+	const date = localDate(t);
+	if (date === localDate(now) || date === localDate(new Date(now.getTime() - 86_400_000))) return t;
+	return now;
+}
+
 export function markActivity(dbs: Dbs, userId: number, now = new Date()): void {
 	dbs.progress.prepare('insert or ignore into activity_days(user_id, date) values(?, ?)').run(userId, localDate(now));
 }

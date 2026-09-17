@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<title>오프라인 · Junglish</title>
+		<style>
+			:root { color-scheme: light dark; --bg: #f5f7f4; --surface: #fff; --ink: #16241e; --muted: #6b7b73; --line: #e1e6df; }
+			@media (prefers-color-scheme: dark) {
+				:root { --bg: #0e1512; --surface: #18211d; --ink: #e8efea; --muted: #8fa096; --line: #263029; }
+			}
+			body {
+				margin: 0; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+				background: var(--bg); color: var(--ink); text-align: center; padding: 24px;
+				font-family: Pretendard, -apple-system, system-ui, 'Apple SD Gothic Neo', sans-serif;
+			}
+			.box { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 28px 22px; max-width: 320px; }
+			p.mark { font-size: 48px; margin: 0 0 8px; }
+			h1 { font-size: 20px; font-weight: 800; margin: 0 0 8px; }
+			p.body { font-size: 14px; color: var(--muted); margin: 0; line-height: 1.6; }
+		</style>
+	</head>
+	<body>
+		<div class="box">
+			<p class="mark">🌿</p>
+			<h1>오프라인입니다</h1>
+			<p class="body">
+				이 화면은 아직 받아둔 적이 없어요.<br />
+				연결되면 이어서 계속할 수 있습니다.
+			</p>
+		</div>
+	</body>
+</html>

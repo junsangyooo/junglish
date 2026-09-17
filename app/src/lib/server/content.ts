@@ -37,6 +37,23 @@ export function patternById(dbs: Dbs, id: number): PatternRow | null {
 	return (dbs.content.prepare('select * from patterns where id=?').get(id) as PatternRow) ?? null;
 }
 
+export type ContentTotals = { words: number; patterns: number; dialogues: number; days: number };
+let totals: ContentTotals | undefined;
+
+/** Content is a read-only file that only changes on deploy, so count it once. */
+export function contentTotals(dbs: Dbs): ContentTotals {
+	if (!totals) {
+		const one = (sql: string) => (dbs.content.prepare(sql).get() as { n: number }).n;
+		totals = {
+			words: one('select count(*) as n from words'),
+			patterns: one('select count(*) as n from patterns'),
+			dialogues: one('select count(*) as n from dialogues'),
+			days: one('select count(distinct day) as n from words')
+		};
+	}
+	return totals;
+}
+
 export function hasDay(dbs: Dbs, day: number): boolean {
 	return !!dbs.content.prepare('select 1 from words where day=? limit 1').get(day);
 }

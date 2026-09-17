@@ -1,7 +1,7 @@
 <!-- app/src/routes/login/+page.svelte -->
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	let { form } = $props();
+	let { data, form } = $props();
 </script>
 
 <div class="screen">
@@ -17,5 +17,12 @@
 			{#if form?.message}<p class="small" style="color:var(--again); margin:0">{form.message}</p>{/if}
 			<button>로그인</button>
 		</form>
+	</div>
+
+	<div class="bar stack">
+		{#if data.signupOpen}
+			<a class="btn btn-quiet" href="/signup">초대 코드로 계정 만들기</a>
+		{/if}
+		<a class="btn-ghost btn" href="/">처음 화면으로</a>
 	</div>
 </div>

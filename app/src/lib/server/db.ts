@@ -45,13 +45,33 @@ CREATE TABLE IF NOT EXISTS activity_days (
 CREATE TABLE IF NOT EXISTS login_attempts (
   ip TEXT NOT NULL, attempted_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint TEXT PRIMARY KEY, user_id INTEGER NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
 `;
+
+/** CREATE TABLE IF NOT EXISTS cannot add columns to a table that already exists, so do it here. */
+const USER_COLUMNS: [string, string][] = [
+	['notify_enabled', 'integer not null default 0'],
+	['notify_at', "text not null default '21:00'"],
+	['notify_last_sent', 'text']
+];
+
+function addMissingUserColumns(db: Database.Database): void {
+	const existing = new Set((db.pragma('table_info(users)') as { name: string }[]).map((c) => c.name));
+	for (const [name, type] of USER_COLUMNS) {
+		if (!existing.has(name)) db.exec(`alter table users add column ${name} ${type}`);
+	}
+}
 
 export function openDbs(contentPath: string, progressPath: string): Dbs {
 	const content = new Database(contentPath, { readonly: contentPath !== ':memory:' });
 	const progress = new Database(progressPath);
 	progress.pragma('journal_mode = WAL');
 	progress.exec(PROGRESS_SCHEMA);
+	addMissingUserColumns(progress);
 	return { content, progress };
 }
 

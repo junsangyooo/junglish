@@ -1,11 +1,12 @@
 // app/src/routes/login/+page.server.ts
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { checkLoginRate, login, SESSION_DAYS } from '$lib/server/auth';
+import { checkLoginRate, login, signupOpen, SESSION_DAYS } from '$lib/server/auth';
 import { getDbs } from '$lib/server/db';
 
 export const load: PageServerLoad = ({ locals }) => {
 	if (locals.user) redirect(303, '/');
+	return { signupOpen: signupOpen() };
 };
 
 export const actions: Actions = {
