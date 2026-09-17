@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
 	import type { CardVM } from '$lib/server/cards';
-	import { enqueue, flush, pending } from '$lib/queue';
+	import { enqueue, flush, isPermanentRejection, pending } from '$lib/queue';
 	import FlipCard from './FlipCard.svelte';
 	import TypeCard from './TypeCard.svelte';
 	import SessionHeader from './SessionHeader.svelte';
@@ -15,9 +14,11 @@
 
 	onMount(() => {
 		queued = pending();
+		// No invalidateAll here: reloading mid-session would hand us a new card list and
+		// restart the user at card 1. The server already has the ratings.
 		const drain = async () => {
+			if (pending() === 0) return;
 			queued = await flush();
-			if (queued === 0) await invalidateAll();
 		};
 		if (queued) drain();
 		addEventListener('online', drain);
@@ -29,7 +30,7 @@
 			try {
 				const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 				if (r.ok) return true;
-				if (r.status >= 400 && r.status < 500) return true; // the server rejected it for good
+				if (isPermanentRejection(r.status)) return true; // the server will never take it
 			} catch { /* offline — fall through to the queue */ }
 			await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
 		}

@@ -10,6 +10,8 @@
 	onMount(() => {
 		ios = isIos();
 		show = shouldShowInstallBanner({ standalone: isStandalone(), dismissed: isDismissed() });
+		// app.html catches the event before hydration; it never fires again on this page.
+		prompt = (window as unknown as { __installPrompt?: Event & { prompt(): Promise<void> } }).__installPrompt ?? null;
 		const onPrompt = (e: Event) => {
 			e.preventDefault();
 			prompt = e as Event & { prompt(): Promise<void> };

@@ -71,13 +71,28 @@ sw.addEventListener('notificationclick', (event) => {
 	const url = (event.notification.data as { url?: string } | undefined)?.url ?? '/';
 	event.waitUntil(
 		(async () => {
-			const clients = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
-			for (const client of clients) {
-				await client.focus();
-				await client.navigate(url);
-				return;
+			// navigate() rejects for a client this worker does not control; fall through to a new window.
+			for (const client of await sw.clients.matchAll({ type: 'window' })) {
+				try {
+					await client.focus();
+					await client.navigate(url);
+					return;
+				} catch { /* try the next client */ }
 			}
 			await sw.clients.openWindow(url);
+		})()
+	);
+});
+
+/** Logging out must not leave the previous user's pages readable offline. */
+sw.addEventListener('message', (event) => {
+	if ((event.data as { type?: string } | undefined)?.type !== 'clear-pages') return;
+	event.waitUntil(
+		(async () => {
+			const cache = await caches.open(CACHE);
+			for (const request of await cache.keys()) {
+				if (!PRECACHED.has(new URL(request.url).pathname)) await cache.delete(request);
+			}
 		})()
 	);
 });

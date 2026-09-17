@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { makeTestDbs } from './helpers';
 import type { Dbs } from '../src/lib/server/db';
 import { completeDay, getProgress } from '../src/lib/server/mission';
-import { dueReminders, markReminderSent, saveSubscription, seoulClock, subscriptionCount } from '../src/lib/server/push';
+import { deleteSubscription, dueReminders, markReminderSent, saveSubscription, seoulClock, subscriptionCount } from '../src/lib/server/push';
 
 const now = new Date('2026-09-17T21:00:00+09:00'); // 21:00 KST
 
@@ -64,6 +64,26 @@ describe('dueReminders', () => {
 		setNotify(dbs, {});
 		expect(dueReminders(dbs, now)[0].url).toBe('/');
 	});
+
+	it('still catches the reminder when a tick drifts past the minute', () => {
+		const dbs = makeTestDbs();
+		setNotify(dbs, { at: '21:00' });
+		// A timer that fires a minute late, or a restart just after the target.
+		expect(dueReminders(dbs, new Date('2026-09-17T21:01:00+09:00'))).toHaveLength(1);
+		expect(dueReminders(dbs, new Date('2026-09-17T22:59:00+09:00'))).toHaveLength(1);
+	});
+
+	it('does not send hours late — a 07:00 reminder must not arrive at 23:00', () => {
+		const dbs = makeTestDbs();
+		setNotify(dbs, { at: '07:00' });
+		expect(dueReminders(dbs, new Date('2026-09-17T23:00:00+09:00'))).toEqual([]);
+	});
+
+	it('stays quiet before the time comes', () => {
+		const dbs = makeTestDbs();
+		setNotify(dbs, { at: '21:00' });
+		expect(dueReminders(dbs, new Date('2026-09-17T20:59:00+09:00'))).toEqual([]);
+	});
 });
 
 describe('subscriptions', () => {
@@ -76,5 +96,17 @@ describe('subscriptions', () => {
 
 		saveSubscription(dbs, 1, { endpoint: 'https://push.example/def', keys: { p256dh: 'k', auth: 'a' } });
 		expect(subscriptionCount(dbs, 1)).toBe(2);
+	});
+
+	it('lets a user delete only their own subscription', () => {
+		const dbs = makeTestDbs();
+		dbs.progress.prepare("insert into users(id,name,password_hash) values(2,'other','x')").run();
+		saveSubscription(dbs, 1, { endpoint: 'https://push.example/mine', keys: { p256dh: 'k', auth: 'a' } });
+
+		deleteSubscription(dbs, 2, 'https://push.example/mine');
+		expect(subscriptionCount(dbs, 1)).toBe(1);
+
+		deleteSubscription(dbs, 1, 'https://push.example/mine');
+		expect(subscriptionCount(dbs, 1)).toBe(0);
 	});
 });

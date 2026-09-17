@@ -15,7 +15,8 @@ export const actions: Actions = {
 	default: async ({ request, cookies, getClientAddress }) => {
 		if (!signupOpen()) return fail(403, { message: '지금은 가입을 받지 않습니다', name: '' });
 		const dbs = getDbs();
-		if (!checkLoginRate(dbs, getClientAddress())) return fail(429, { message: '잠시 후 다시 시도하세요', name: '' });
+		// Own bucket: mistyped invite codes must not lock the office out of logging in.
+		if (!checkLoginRate(dbs, `signup:${getClientAddress()}`)) return fail(429, { message: '잠시 후 다시 시도하세요', name: '' });
 
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();

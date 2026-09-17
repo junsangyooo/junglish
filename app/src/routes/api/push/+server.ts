@@ -12,7 +12,7 @@ export const POST: RequestHandler = async (event) => {
 
 	if (body.action === 'unsubscribe') {
 		if (typeof body.endpoint !== 'string' || !body.endpoint) throw error(400, 'bad request');
-		deleteSubscription(dbs, body.endpoint);
+		deleteSubscription(dbs, userId, body.endpoint);
 		return ok({ ok: true });
 	}
 

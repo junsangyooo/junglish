@@ -179,7 +179,12 @@
 	</div>
 
 	<h2>계정</h2>
-	<form method="POST" action="/logout" style="margin-bottom:16px">
+	<form
+		method="POST"
+		action="/logout"
+		style="margin-bottom:16px"
+		onsubmit={() => navigator.serviceWorker?.controller?.postMessage({ type: 'clear-pages' })}
+	>
 		<button class="btn-quiet">로그아웃</button>
 	</form>
 </div>
